@@ -1,0 +1,22 @@
+{
+  "name": "TikTok Shop OS",
+  "short_name": "TikTok OS",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#4f46e5",
+  "description": "Sistema Operacional de Automação para TikTok Shop.",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3046/3046121.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3046/3046121.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "orientation": "portrait-primary"
+}

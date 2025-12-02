@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Users, DollarSign, Server, Activity, Ban, ShieldCheck, Wallet, Search, Wand2, BarChart3, LogOut, Lock, Save, Landmark, CreditCard, Bitcoin, Power, Zap, Settings, Globe, Database, AlertOctagon, Mail, Trash2, Smartphone, MessageCircle, ExternalLink, AlertTriangle, Workflow } from 'lucide-react';
+import { Users, DollarSign, Server, Activity, Ban, ShieldCheck, Wallet, Search, Wand2, BarChart3, LogOut, Lock, Save, Landmark, CreditCard, Bitcoin, Power, Zap, Settings, Globe, Database, AlertOctagon, Mail, Trash2, Smartphone, MessageCircle, ExternalLink, AlertTriangle, Workflow, Copy, Share2 } from 'lucide-react';
 import { db } from '../services/mockDatabase';
 import { User, Transaction, AdminPaymentConfig, SystemSettings } from '../types';
 import { ProductResearch } from './ProductResearch';
@@ -75,8 +75,14 @@ const ClientsTable = ({ users, onBan }: { users: User[], onBan: (id: string) => 
           ))}
           {users.filter(u => u.role !== 'admin').length === 0 && (
              <tr>
-               <td colSpan={6} className="px-6 py-8 text-center text-slate-500 italic">
-                 Nenhum cliente registado ainda. Ligue o "Motor de Vendas" e aguarde.
+               <td colSpan={6} className="px-6 py-12 text-center text-slate-500 italic">
+                 <div className="flex flex-col items-center gap-2">
+                   <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700">
+                     <Users className="w-6 h-6 text-slate-600"/>
+                   </div>
+                   <p>A tua lista de clientes está vazia.</p>
+                   <p className="text-xs">Partilha o link da página inicial para angariar o primeiro assinante!</p>
+                 </div>
                </td>
              </tr>
           )}
@@ -96,6 +102,7 @@ export const SuperAdminDashboard: React.FC = () => {
   const [paymentConfig, setPaymentConfig] = useState<AdminPaymentConfig>(db.getPaymentConfig());
   const [systemSettings, setSystemSettings] = useState<SystemSettings>(db.getSystemSettings());
   const [configSaved, setConfigSaved] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Atualização em Tempo Real (Simulada via polling do localStorage)
   useEffect(() => {
@@ -146,6 +153,13 @@ export const SuperAdminDashboard: React.FC = () => {
     if(confirm("PERIGO: ISSO APAGARÁ TODOS OS DADOS, USUÁRIOS E VENDAS. \n\nTem certeza absoluta?")) {
       db.factoryReset();
     }
+  }
+
+  const handleCopyLink = () => {
+    const url = window.location.origin;
+    navigator.clipboard.writeText(url);
+    setLinkCopied(true);
+    setTimeout(() => setLinkCopied(false), 2000);
   }
 
   const testWhatsApp = () => {
@@ -285,67 +299,86 @@ export const SuperAdminDashboard: React.FC = () => {
                  </div>
                </div>
                
-               <button 
-                 onClick={handleToggleAutoSales}
-                 className={`relative w-20 h-10 rounded-full transition-colors duration-300 flex items-center shadow-inner cursor-pointer z-20 ${systemSettings.autoSalesEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
-               >
-                  <div className={`absolute w-8 h-8 bg-white rounded-full shadow-lg transform transition-transform duration-300 flex items-center justify-center ${systemSettings.autoSalesEnabled ? 'translate-x-11' : 'translate-x-1'}`}>
-                     <Power className={`w-4 h-4 ${systemSettings.autoSalesEnabled ? 'text-emerald-600' : 'text-slate-400'}`} />
-                  </div>
-               </button>
+               <div className="relative z-20 flex flex-col gap-2">
+                 <button 
+                   onClick={handleToggleAutoSales}
+                   className={`relative w-20 h-10 rounded-full transition-colors duration-300 flex items-center shadow-inner cursor-pointer self-end ${systemSettings.autoSalesEnabled ? 'bg-emerald-500' : 'bg-slate-700'}`}
+                 >
+                    <div className={`absolute w-8 h-8 bg-white rounded-full shadow-lg transform transition-transform duration-300 flex items-center justify-center ${systemSettings.autoSalesEnabled ? 'translate-x-11' : 'translate-x-1'}`}>
+                       <Power className={`w-4 h-4 ${systemSettings.autoSalesEnabled ? 'text-emerald-600' : 'text-slate-400'}`} />
+                    </div>
+                 </button>
+               </div>
             </div>
 
-            {/* KPI Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group hover:border-emerald-500/50 transition-all">
-                <div className="flex justify-between items-start relative z-10">
-                  <div>
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Receita Total</p>
-                    <h3 className="text-3xl font-black text-emerald-400 mt-2">€{stats.totalRevenue.toLocaleString()}</h3>
+            {/* Zero State / KPI Cards */}
+            {stats.totalRevenue === 0 && transactions.length === 0 ? (
+               <div className="bg-gradient-to-r from-indigo-900/50 to-purple-900/50 border border-indigo-500/30 rounded-xl p-8 text-center py-16">
+                  <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-600/40">
+                    <Share2 className="w-8 h-8 text-white" />
                   </div>
-                  <div className="bg-emerald-500/10 p-2 rounded-lg"><DollarSign className="w-6 h-6 text-emerald-500" /></div>
+                  <h3 className="text-3xl font-bold text-white mb-2">O Sistema Está Pronto.</h3>
+                  <p className="text-indigo-200 mb-8 max-w-lg mx-auto">Não tens vendas registadas. A máquina está limpa e à espera do primeiro cliente. Copia o link e começa a divulgar.</p>
+                  <button 
+                    onClick={handleCopyLink}
+                    className="bg-white text-indigo-900 px-8 py-4 rounded-xl font-bold text-lg hover:bg-indigo-50 transition-colors shadow-xl flex items-center gap-2 mx-auto"
+                  >
+                    {linkCopied ? <ShieldCheck className="w-5 h-5"/> : <Copy className="w-5 h-5"/>}
+                    {linkCopied ? 'Link Copiado!' : 'Copiar Link de Venda'}
+                  </button>
+               </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group hover:border-emerald-500/50 transition-all">
+                  <div className="flex justify-between items-start relative z-10">
+                    <div>
+                      <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Receita Total</p>
+                      <h3 className="text-3xl font-black text-emerald-400 mt-2">€{stats.totalRevenue.toLocaleString()}</h3>
+                    </div>
+                    <div className="bg-emerald-500/10 p-2 rounded-lg"><DollarSign className="w-6 h-6 text-emerald-500" /></div>
+                  </div>
                 </div>
-              </div>
 
-              <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group hover:border-blue-500/50 transition-all">
-                <div className="flex justify-between items-start relative z-10">
-                  <div>
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Clientes Ativos</p>
-                    <h3 className="text-3xl font-black text-white mt-2">{stats.activeClients}</h3>
+                <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group hover:border-blue-500/50 transition-all">
+                  <div className="flex justify-between items-start relative z-10">
+                    <div>
+                      <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Clientes Ativos</p>
+                      <h3 className="text-3xl font-black text-white mt-2">{stats.activeClients}</h3>
+                    </div>
+                    <div className="bg-blue-500/10 p-2 rounded-lg"><Users className="w-6 h-6 text-blue-500" /></div>
                   </div>
-                  <div className="bg-blue-500/10 p-2 rounded-lg"><Users className="w-6 h-6 text-blue-500" /></div>
                 </div>
-              </div>
 
-              <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group hover:border-amber-500/50 transition-all">
-                <div className="flex justify-between items-start relative z-10">
-                  <div>
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Online Agora</p>
-                    <h3 className="text-3xl font-black text-amber-400 mt-2">{stats.onlineUsers}</h3>
-                    <p className="text-[10px] text-slate-500 mt-1">A usar o bot</p>
+                <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group hover:border-amber-500/50 transition-all">
+                  <div className="flex justify-between items-start relative z-10">
+                    <div>
+                      <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Online Agora</p>
+                      <h3 className="text-3xl font-black text-amber-400 mt-2">{stats.onlineUsers}</h3>
+                      <p className="text-[10px] text-slate-500 mt-1">A usar o bot</p>
+                    </div>
+                    <div className="bg-amber-500/10 p-2 rounded-lg"><Activity className="w-6 h-6 text-amber-500" /></div>
                   </div>
-                  <div className="bg-amber-500/10 p-2 rounded-lg"><Activity className="w-6 h-6 text-amber-500" /></div>
                 </div>
-              </div>
 
-               <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group hover:border-purple-500/50 transition-all">
-                <div className="flex justify-between items-start relative z-10">
-                  <div>
-                    <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Carga do N8N</p>
-                    <h3 className="text-3xl font-black text-purple-400 mt-2">12%</h3>
-                    <p className="text-[10px] text-slate-500 mt-1">Servidor Saudável</p>
+                 <div className="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-lg relative overflow-hidden group hover:border-purple-500/50 transition-all">
+                  <div className="flex justify-between items-start relative z-10">
+                    <div>
+                      <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">Carga do N8N</p>
+                      <h3 className="text-3xl font-black text-purple-400 mt-2">0%</h3>
+                      <p className="text-[10px] text-slate-500 mt-1">A aguardar requests</p>
+                    </div>
+                    <div className="bg-purple-500/10 p-2 rounded-lg"><Server className="w-6 h-6 text-purple-500" /></div>
                   </div>
-                  <div className="bg-purple-500/10 p-2 rounded-lg"><Server className="w-6 h-6 text-purple-500" /></div>
                 </div>
               </div>
-            </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                {/* Live Feed */}
                <div className="lg:col-span-1 bg-slate-800 rounded-xl border border-slate-700 p-6 shadow-xl flex flex-col">
                 <div className="flex items-center justify-between mb-4">
                    <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                     <div className="w-2 h-2 bg-red-500 rounded-full animate-ping"></div>
+                     <div className={`w-2 h-2 rounded-full ${transactions.length > 0 ? 'bg-red-500 animate-ping' : 'bg-slate-600'}`}></div>
                      Log ao Vivo
                    </h3>
                    <span className="text-[10px] text-slate-500 bg-slate-900 px-2 py-1 rounded">Real-time</span>
@@ -355,7 +388,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   {transactions.length === 0 ? (
                     <div className="text-center py-10 opacity-50">
                       <Activity className="w-8 h-8 text-slate-600 mx-auto mb-2"/>
-                      <p className="text-xs text-slate-500">A aguardar transações...</p>
+                      <p className="text-xs text-slate-500">A aguardar primeira transação...</p>
                     </div>
                   ) : (
                     transactions.map((tx, idx) => (

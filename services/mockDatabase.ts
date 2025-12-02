@@ -1,19 +1,15 @@
 
 import { User, Transaction, UserRole, AdminPaymentConfig, SystemSettings } from '../types';
 
-// VERSÃO 5.0 - PRODUÇÃO (Hard Refresh das chaves para limpar cache antigo)
+// VERSÃO 6.0 - MUNDO REAL (Limpeza total de dados de teste)
 const KEYS = {
-  USERS: 'tiktok_os_users_v5_prod',
-  TRANSACTIONS: 'tiktok_os_transactions_v5_prod',
-  PAYMENT_CONFIG: 'tiktok_os_payment_config_v5_prod',
-  SYSTEM_SETTINGS: 'tiktok_os_system_settings_v5_prod'
+  USERS: 'tiktok_os_users_v6_real_world',
+  TRANSACTIONS: 'tiktok_os_transactions_v6_real_world',
+  PAYMENT_CONFIG: 'tiktok_os_payment_config_v6_real_world',
+  SYSTEM_SETTINGS: 'tiktok_os_system_settings_v6_real_world'
 };
 
-// Seed Data com datas dinâmicas (sempre parecem recentes)
-const now = new Date();
-const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
-const twoDaysAgo = new Date(now); twoDaysAgo.setDate(now.getDate() - 2);
-
+// Seed Data LIMPO - Apenas o Dono existe inicialmente
 const DEFAULT_USERS: User[] = [
   { 
     id: 'admin', 
@@ -23,56 +19,29 @@ const DEFAULT_USERS: User[] = [
     role: 'admin', 
     status: 'active', 
     isOnline: true, 
-    joinedAt: '2023-01-01', 
-    lastLogin: now.toISOString() 
-  },
-  { 
-    id: 'cliente_vip', 
-    name: 'Marcos Digital', 
-    email: 'marcos@agencia.pt', 
-    password: '123', 
-    role: 'client', 
-    plan: 'agency', 
-    status: 'active', 
-    isOnline: true, 
-    joinedAt: twoDaysAgo.toISOString(),
-    lastLogin: now.toISOString() 
-  },
-  {
-    id: 'cliente_pro',
-    name: 'Ana Loja 1',
-    email: 'ana@loja.com',
-    password: '456',
-    role: 'client', 
-    plan: 'pro',
-    status: 'active',
-    isOnline: false,
-    joinedAt: yesterday.toISOString(),
-    lastLogin: yesterday.toISOString()
+    joinedAt: new Date().toISOString(), 
+    lastLogin: new Date().toISOString() 
   }
 ];
 
-const DEFAULT_TRANSACTIONS: Transaction[] = [
-  { id: 'tx_demo_1', userId: 'cliente_vip', amount: 499, method: 'CRYPTO', status: 'completed', date: now.toISOString() },
-  { id: 'tx_demo_2', userId: 'cliente_pro', amount: 150, method: 'MBWAY', status: 'completed', date: yesterday.toISOString() },
-  { id: 'tx_demo_3', userId: 'u_anon_1', amount: 50, method: 'PAYPAL', status: 'pending', date: twoDaysAgo.toISOString() }
-];
+// Sem transações falsas. Começamos do zero.
+const DEFAULT_TRANSACTIONS: Transaction[] = [];
 
 const DEFAULT_CONFIG: AdminPaymentConfig = {
   mbwayNumber: '', // Usuário deve configurar
   paypalEmail: '',
   cryptoWallet: '',
   iban: '',
-  whatsappNumber: '' // Usuário deve configurar para receber comprovativos
+  whatsappNumber: '' // CRÍTICO: Usuário deve configurar para receber comprovativos
 };
 
 const DEFAULT_SETTINGS: SystemSettings = {
   autoSalesEnabled: true,
   appName: 'TikTok Shop OS',
   globalApiKey: 'AIzaSyCJWHZ_87DNVAz374zn0fNKBaW9O_eQZyk',
-  n8nWebhookUrl: '', // URL do N8N para processamento real
+  n8nWebhookUrl: '', 
   maintenanceMode: false,
-  supportEmail: 'contato@meubot.com'
+  supportEmail: 'suporte@meubot.com'
 };
 
 // Helpers de LocalStorage

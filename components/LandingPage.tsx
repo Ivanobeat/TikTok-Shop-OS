@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Check, Zap, BarChart, Shield, Lock, CreditCard, Bitcoin, PlayCircle, Star, ArrowRight, TrendingUp, AlertCircle, MessageCircle } from 'lucide-react';
+import { Check, Zap, BarChart, Shield, Lock, CreditCard, Bitcoin, PlayCircle, Star, ArrowRight, TrendingUp, AlertCircle, MessageCircle, Clock } from 'lucide-react';
 import { db } from '../services/mockDatabase';
 
 interface LandingPageProps {
@@ -66,51 +66,57 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onPurcha
       setProcessing(false);
       setShowPaymentModal(false);
       
-      const tempId = `user_${Math.floor(Math.random() * 10000)}`;
-      const tempPass = Math.random().toString(36).slice(-6).toUpperCase();
+      const orderId = `ORD-${Math.floor(Math.random() * 10000)}`;
+      const generatedPass = Math.random().toString(36).slice(-8).toUpperCase(); // Senha gerada internamente, NÃO MOSTRADA AO CLIENTE
       const planPrice = getPrice(selectedPlan);
 
-      // 1. Criar o utilizador na DB
+      // 1. Criar o utilizador na DB com status PENDENTE (Conta Bloqueada)
+      // O Admin verá a senha no painel para enviar DEPOIS do pagamento
       db.addUser({
-        id: tempId,
-        name: `Cliente Novo (${tempId})`,
-        email: tempId,
-        password: tempPass,
+        id: `client_${orderId}`,
+        name: `Cliente Novo (${orderId})`,
+        email: `aguardando_validacao_${orderId}`,
+        password: generatedPass,
         role: 'client',
         plan: selectedPlan,
-        status: 'active',
+        status: 'pending_payment', // STATUS CRÍTICO: PENDENTE
         isOnline: false,
         joinedAt: new Date().toISOString(),
         lastLogin: 'Never'
       });
 
-      // 2. Registar a venda
+      // 2. Registar a venda como PENDENTE
       db.addTransaction({
-        id: `tx_${Date.now()}`,
-        userId: tempId,
+        id: orderId,
+        userId: `client_${orderId}`,
         amount: planPrice,
         method: paymentMethod,
-        status: 'completed',
+        status: 'pending', // Transação não confirmada
         date: new Date().toISOString()
       });
       
-      // 3. WhatsApp Integration (Mundo Real)
+      // 3. WhatsApp Integration (Obrigatorio para validar)
       const whatsappNumber = adminConfig.whatsappNumber;
       
+      let message = "";
+      
       if (whatsappNumber) {
-        // Formatar mensagem
-        const message = `Olá! 👋\n\nAcabei de realizar o pagamento do plano *${selectedPlan.toUpperCase()}* (€${planPrice}) via *${paymentMethod}*.\n\nMeu ID de acesso gerado foi: *${tempId}*\n\nEnvio em anexo o comprovativo. Aguardo a liberação total!`;
+        // Formatar mensagem para o Admin
+        message = `Olá! 👋\n\nFiz um pedido do plano *${selectedPlan.toUpperCase()}* (€${planPrice}) via *${paymentMethod}*.\n\n🆔 *ID do Pedido: ${orderId}*\n\nEnvio em anexo o comprovativo de pagamento.\nPor favor, valide o meu pagamento e envie o meu Login/Senha.`;
         
         // Abrir WhatsApp
         const url = `https://wa.me/${whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
         window.open(url, '_blank');
         
-        alert(`🎉 PAGAMENTO INICIADO!\n\nVocê escolheu o plano: ${selectedPlan.toUpperCase()}\n\nSuas credenciais PROVISÓRIAS são:\nLOGIN: ${tempId}\nSENHA: ${tempPass}\n\n⚠️ IMPORTANTE: Uma janela do WhatsApp foi aberta. Envie o comprovativo agora para validarmos a sua conta.`);
+        // Alerta Seguro (Sem senha)
+        alert(`⌛ PEDIDO REGISTADO: ${orderId}\n\nO WhatsApp foi aberto automaticamente.\n\nPASSO FINAL: Envie o comprovativo de pagamento para nós pelo WhatsApp.\n\nAssim que confirmarmos o dinheiro, enviaremos o seu LOGIN e SENHA por lá.\n\nNão feche o WhatsApp.`);
       } else {
-        alert(`🎉 PAGAMENTO REGISTADO!\n\nNota: O administrador ainda não configurou o WhatsApp automático.\n\nGuarde estas credenciais:\nLOGIN: ${tempId}\nSENHA: ${tempPass}\n\nEnvie o comprovativo manualmente para o suporte.`);
+        // Fallback se o admin não configurou WhatsApp (Ainda seguro, não mostra senha)
+        alert(`⌛ PEDIDO REGISTADO: ${orderId}\n\nGuarde este ID.\n\nEnvie o comprovativo de pagamento manualmente para o suporte.\n\nAs suas credenciais serão enviadas APÓS a confirmação do pagamento.`);
       }
 
-      onPurchaseComplete(tempId, tempPass);
+      // NÃO redireciona para login automaticamente. O utilizador tem de esperar.
+      // onPurchaseComplete(...) <- REMOVIDO POR SEGURANÇA
     }, 2000);
   };
 
@@ -402,9 +408,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onPurcha
                   <div className="flex gap-4">
                     <button onClick={() => setShowPaymentModal(false)} className="flex-1 py-4 text-slate-500 font-bold hover:bg-slate-50 rounded-xl transition-colors">Cancelar</button>
                     <button onClick={handlePurchase} className="flex-[2] py-4 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 shadow-xl shadow-indigo-200 transition-all transform active:scale-95">
-                      Confirmar Pagamento
+                      Enviar Pedido
                     </button>
                   </div>
+                  <p className="text-[10px] text-slate-400 text-center mt-3 flex items-center justify-center gap-1">
+                    <Clock className="w-3 h-3"/> Acesso libertado após confirmação.
+                  </p>
                 </>
               ) : (
                 <div className="text-center py-12">
@@ -412,8 +421,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick, onPurcha
                      <div className="absolute inset-0 border-4 border-slate-100 rounded-full"></div>
                      <div className="absolute inset-0 border-4 border-indigo-600 rounded-full border-t-transparent animate-spin"></div>
                   </div>
-                  <h4 className="text-xl font-bold text-slate-800">A processar...</h4>
-                  <p className="text-slate-500 text-sm mt-2">A abrir WhatsApp para envio do comprovativo...</p>
+                  <h4 className="text-xl font-bold text-slate-800">A criar pedido seguro...</h4>
+                  <p className="text-slate-500 text-sm mt-2">A preparar WhatsApp para validação...</p>
                 </div>
               )}
             </div>

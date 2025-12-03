@@ -1,12 +1,12 @@
 
 import { User, Transaction, UserRole, AdminPaymentConfig, SystemSettings } from '../types';
 
-// VERSÃO 25.0 - STABLE CORE (Cache Buster)
+// VERSÃO 27.0 - SECURE CHECKOUT (Force Refresh)
 const KEYS = {
-  USERS: 'tiktok_os_users_v25_stable',
-  TRANSACTIONS: 'tiktok_os_transactions_v25_stable',
-  PAYMENT_CONFIG: 'tiktok_os_payment_config_v25_stable',
-  SYSTEM_SETTINGS: 'tiktok_os_system_settings_v25_stable'
+  USERS: 'tiktok_os_users_v27_secure',
+  TRANSACTIONS: 'tiktok_os_transactions_v27_secure',
+  PAYMENT_CONFIG: 'tiktok_os_payment_config_v27_secure',
+  SYSTEM_SETTINGS: 'tiktok_os_system_settings_v27_secure'
 };
 
 // Seed Data LIMPO - Apenas o Dono existe inicialmente
@@ -131,6 +131,8 @@ export const db = {
     
     if (user) {
       if (user.status === 'banned') throw new Error('Acesso revogado pelo administrador.');
+      if (user.status === 'pending_payment') throw new Error('Conta aguardando validação de pagamento. Contacte o suporte.'); // Nova Regra de Segurança
+      
       user.isOnline = true;
       user.lastLogin = new Date().toISOString();
       users = users.map(u => u.id === user.id ? user : u);
@@ -171,7 +173,7 @@ export const db = {
   },
 
   getStats: () => {
-    const totalRevenue = transactions.reduce((acc, curr) => acc + curr.amount, 0);
+    const totalRevenue = transactions.reduce((acc, curr) => curr.status === 'completed' ? acc + curr.amount : acc, 0);
     const activeClients = users.filter(u => u.role === 'client' && u.status === 'active').length;
     const onlineUsers = users.filter(u => u.isOnline && u.role === 'client').length;
     return { totalRevenue, activeClients, onlineUsers };

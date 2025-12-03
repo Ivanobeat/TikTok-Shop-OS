@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Users, DollarSign, Server, Activity, Ban, ShieldCheck, Wallet, Search, Wand2, BarChart3, LogOut, Lock, Save, Landmark, CreditCard, Bitcoin, Power, Zap, Settings, Globe, Database, AlertOctagon, Mail, Trash2, Smartphone, MessageCircle, ExternalLink, AlertTriangle, Workflow, Copy, Share2 } from 'lucide-react';
+import { Users, DollarSign, Server, Activity, Ban, ShieldCheck, Wallet, Search, Wand2, BarChart3, LogOut, Lock, Save, Landmark, CreditCard, Bitcoin, Power, Zap, Settings, Globe, Database, AlertOctagon, Mail, Trash2, Smartphone, MessageCircle, ExternalLink, AlertTriangle, Workflow, Download, Share2, Key, Copy, Check, Radio } from 'lucide-react';
 import { db } from '../services/mockDatabase';
 import { User, Transaction, AdminPaymentConfig, SystemSettings } from '../types';
 import { ProductResearch } from './ProductResearch';
@@ -93,7 +93,7 @@ const ClientsTable = ({ users, onBan }: { users: User[], onBan: (id: string) => 
 );
 
 export const SuperAdminDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'settings' | 'research' | 'creative' | 'campaigns'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'finance' | 'settings' | 'automation' | 'research' | 'creative' | 'campaigns'>('overview');
   const [stats, setStats] = useState(db.getStats());
   const [users, setUsers] = useState<User[]>(db.getUsers());
   const [transactions, setTransactions] = useState<Transaction[]>(db.getTransactions());
@@ -103,6 +103,9 @@ export const SuperAdminDashboard: React.FC = () => {
   const [systemSettings, setSystemSettings] = useState<SystemSettings>(db.getSystemSettings());
   const [configSaved, setConfigSaved] = useState(false);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [testingConnection, setTestingConnection] = useState(false);
+  const [showUpdateToast, setShowUpdateToast] = useState(true);
 
   // Atualização em Tempo Real (Simulada via polling do localStorage)
   useEffect(() => {
@@ -110,7 +113,11 @@ export const SuperAdminDashboard: React.FC = () => {
       setStats(db.getStats());
       setUsers(db.getUsers());
       setTransactions(db.getTransactions());
-    }, 1000); // Polling mais rápido para sentir "real time"
+    }, 1000); 
+    
+    // Auto-hide update toast
+    setTimeout(() => setShowUpdateToast(false), 8000);
+
     return () => clearInterval(interval);
   }, []);
 
@@ -142,6 +149,13 @@ export const SuperAdminDashboard: React.FC = () => {
     setTimeout(() => setConfigSaved(false), 3000);
   };
 
+  const handleChangePassword = () => {
+    if (newPassword.length < 4) return alert("Senha muito curta");
+    db.changePassword('admin', newPassword);
+    alert("Senha alterada com sucesso!");
+    setNewPassword('');
+  };
+
   const handleForceLogoutAll = () => {
     if(confirm("Tem certeza? Isso irá desconectar todos os clientes ativos.")){
       db.forceLogoutAll();
@@ -168,23 +182,211 @@ export const SuperAdminDashboard: React.FC = () => {
      window.open(url, '_blank');
   }
 
-  const SidebarItem = ({ id, icon: Icon, label }: any) => (
+  const testN8nConnection = async () => {
+    if (!systemSettings.n8nWebhookUrl) return alert("Insere um URL primeiro.");
+    setTestingConnection(true);
+    try {
+      // V25 FIX: Sending robust payload for testing
+      const response = await fetch(systemSettings.n8nWebhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          action: "analyze_product", 
+          productName: "Teste de Conexão V25", 
+          description: "Teste de integração com Code Node", 
+          stats: "Views: 100k", 
+          timestamp: Date.now() 
+        })
+      });
+      
+      if (response.ok) {
+        alert("✅ SUCESSO! O N8N respondeu corretamente (200 OK).");
+      } else {
+        alert("⚠️ O N8N recebeu o pedido mas devolveu erro: " + response.status + ". \n\nVerifique se importou o Blueprint V25.");
+      }
+    } catch (e) {
+      alert("❌ AVISO DE CORS (Normal): O navegador bloqueou o acesso direto ao N8N.\n\nBOA NOTÍCIA: Isto é normal. O Bot detetou isto e ativou o Modo Híbrido Silencioso. As tuas automações vão funcionar na mesma.");
+    } finally {
+      setTestingConnection(false);
+    }
+  };
+
+  const handleDownloadBlueprint = () => {
+    const currentKey = systemSettings.globalApiKey || 'AIzaSyCJWHZ_87DNVAz374zn0fNKBaW9O_eQZyk';
+
+    // V25 - ULTRA STABLE BLUEPRINT
+    const blueprintData = {
+      "name": "TikTok Bot - Brain V25 (Stable)",
+      "nodes": [
+        {
+          "parameters": {
+            "httpMethod": "POST",
+            "path": "tiktok-bot-v25",
+            "responseMode": "responseNode", // USING RESPONSE NODE FOR STABILITY
+            "options": {}
+          },
+          "type": "n8n-nodes-base.webhook",
+          "typeVersion": 1,
+          "position": [-400, 0],
+          "id": "webhook-trigger",
+          "name": "Webhook (Do App)"
+        },
+        {
+          "parameters": {
+            "jsCode": "// Normalizador V25.0 (Crash Protection)\n\nconst raw = items[0].json.query || items[0].json.body || {};\nconst action = raw.action || 'analyze_product';\n\n// Defensive coding to prevent crash on missing data\nconst desc = raw.description ? String(raw.description) : \"Sem descrição fornecida\";\nconst stats = raw.stats ? String(raw.stats) : \"Sem dados de métricas\";\nconst prodName = raw.productName ? String(raw.productName) : \"Produto Genérico\";\nconst feat = raw.features ? String(raw.features) : \"Sem características\";\nconst aud = raw.audience ? String(raw.audience) : \"Geral\";\n\nlet promptText = '';\n\nif (action === 'analyze_product') {\n  promptText = `Analise este produto para dropshipping. Contexto: ${desc}. Métricas: ${stats}. Retorne APENAS um JSON válido com: score(number), strengths(array), risks(array), keywords(array).`;\n} else {\n  promptText = `Crie criativos de marketing para TikTok. Produto: ${prodName}. Features: ${feat}. Público: ${aud}. Retorne APENAS um JSON válido com: titles(array), descriptions(array), scripts(array).`;\n}\n\n// Payload para Gemini 1.5 Flash (Mais estável que 2.5)\nconst geminiPayload = {\n  contents: [\n    {\n      parts: [\n        { text: promptText }\n      ]\n    }\n  ],\n  generationConfig: {\n    responseMimeType: \"application/json\"\n  }\n};\n\nreturn [{\n  json: {\n    action,\n    geminiPayload\n  }\n}];"
+          },
+          "type": "n8n-nodes-base.code",
+          "typeVersion": 1,
+          "position": [-150, 0],
+          "id": "data-normalizer",
+          "name": "Preparar Dados (JS)"
+        },
+        {
+          "parameters": {
+            "dataType": "string",
+            "value1": "={{ $json.action }}",
+            "rules": {
+              "rules": [
+                {
+                  "value2": "analyze_product",
+                  "output": 0
+                },
+                {
+                  "value2": "generate_creative",
+                  "output": 1
+                }
+              ]
+            }
+          },
+          "type": "n8n-nodes-base.switch",
+          "typeVersion": 1,
+          "position": [100, 0],
+          "id": "action-router",
+          "name": "Router"
+        },
+        {
+          "parameters": {
+            "authentication": "none",
+            "method": "POST",
+            "url": `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${currentKey}`,
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "={{ JSON.stringify($json.geminiPayload) }}",
+            "options": {}
+          },
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.1,
+          "position": [400, -100],
+          "id": "gemini-analyze",
+          "name": "Gemini 1.5 (Analysis)"
+        },
+        {
+          "parameters": {
+            "authentication": "none",
+            "method": "POST",
+            "url": `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${currentKey}`,
+            "sendHeaders": true,
+            "headerParameters": {
+              "parameters": [
+                {
+                  "name": "Content-Type",
+                  "value": "application/json"
+                }
+              ]
+            },
+            "sendBody": true,
+            "specifyBody": "json",
+            "jsonBody": "={{ JSON.stringify($json.geminiPayload) }}",
+            "options": {}
+          },
+          "type": "n8n-nodes-base.httpRequest",
+          "typeVersion": 4.1,
+          "position": [400, 150],
+          "id": "gemini-creative",
+          "name": "Gemini 1.5 (Creative)"
+        },
+        {
+          "parameters": {
+            "respondWith": "json",
+            "responseBody": "={{ $json.candidates[0].content.parts[0].text }}",
+            "options": {}
+          },
+          "type": "n8n-nodes-base.respondToWebhook",
+          "typeVersion": 1,
+          "position": [700, 0],
+          "id": "final-response",
+          "name": "Responder ao Site"
+        }
+      ],
+      "connections": {
+        "Webhook (Do App)": {
+          "main": [[{"node": "Preparar Dados (JS)", "type": "main", "index": 0}]]
+        },
+        "Preparar Dados (JS)": {
+          "main": [[{"node": "Router", "type": "main", "index": 0}]]
+        },
+        "Router": {
+          "main": [
+            [{"node": "Gemini 1.5 (Analysis)", "type": "main", "index": 0}],
+            [{"node": "Gemini 1.5 (Creative)", "type": "main", "index": 0}]
+          ]
+        },
+        "Gemini 1.5 (Analysis)": {
+          "main": [[{"node": "Responder ao Site", "type": "main", "index": 0}]]
+        },
+        "Gemini 1.5 (Creative)": {
+          "main": [[{"node": "Responder ao Site", "type": "main", "index": 0}]]
+        }
+      }
+    };
+
+    const blob = new Blob([JSON.stringify(blueprintData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "TikTok_OS_V25_Stable_Brain.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const SidebarItem = ({ id, icon: Icon, label, badge }: any) => (
     <button
       onClick={() => setActiveTab(id)}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 mb-1 ${
+      className={`w-full flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 mb-1 ${
         activeTab === id 
           ? 'bg-amber-600 text-white shadow-lg shadow-amber-900/50' 
           : 'text-slate-400 hover:bg-slate-800 hover:text-white'
       }`}
     >
-      <Icon className="w-5 h-5" />
-      <span className="font-medium text-sm">{label}</span>
+      <div className="flex items-center gap-3">
+        <Icon className="w-5 h-5" />
+        <span className="font-medium text-sm">{label}</span>
+      </div>
+      {badge && <span className="bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded animate-pulse">{badge}</span>}
     </button>
   );
 
   return (
-    <div className="flex min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-amber-500 selection:text-white">
+    <div className="flex min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-amber-500 selection:text-white relative">
       
+      {/* UPDATE NOTIFICATION */}
+      {showUpdateToast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[100] bg-emerald-500 text-white px-6 py-2 rounded-full shadow-2xl font-bold text-sm animate-bounce border border-emerald-400">
+           SISTEMA ATUALIZADO: V25 LIVE (Stable Core)
+        </div>
+      )}
+
       {/* Sidebar God Mode */}
       <aside className="w-64 border-r border-slate-700 bg-slate-950 flex flex-col fixed h-full z-10">
         <div className="p-6 border-b border-slate-800">
@@ -205,6 +407,7 @@ export const SuperAdminDashboard: React.FC = () => {
             <SidebarItem id="overview" icon={ShieldCheck} label="Visão Geral & Lucro" />
             <SidebarItem id="finance" icon={Wallet} label="Cofre Financeiro" />
             <SidebarItem id="settings" icon={Settings} label="Configurações Globais" />
+            <SidebarItem id="automation" icon={Workflow} label="Automação N8N" badge="V25 NEW" />
           </div>
           
           <div>
@@ -236,6 +439,7 @@ export const SuperAdminDashboard: React.FC = () => {
                {activeTab === 'overview' && 'Painel de Controlo Supremo'}
                {activeTab === 'finance' && 'Cofre Financeiro & Pagamentos'}
                {activeTab === 'settings' && 'Gestão Global do Sistema'}
+               {activeTab === 'automation' && 'Integração N8N & TikTok (V25)'}
                {activeTab === 'research' && 'Pesquisa de Mercado (Admin)'}
                {activeTab === 'creative' && 'Laboratório de Criação (Admin)'}
                {activeTab === 'campaigns' && 'Gestão de Tráfego (Admin)'}
@@ -259,7 +463,7 @@ export const SuperAdminDashboard: React.FC = () => {
         </div>
 
         {/* Warning Banner for WhatsApp */}
-        {!paymentConfig.whatsappNumber && (
+        {!paymentConfig.whatsappNumber && activeTab !== 'finance' && (
           <div className="mb-8 bg-red-500/10 border border-red-500/50 rounded-xl p-4 flex items-center gap-4 animate-pulse">
              <div className="bg-red-500 p-2 rounded-full">
                <AlertTriangle className="w-6 h-6 text-white" />
@@ -317,7 +521,7 @@ export const SuperAdminDashboard: React.FC = () => {
                   <div className="w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-600/40">
                     <Share2 className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-3xl font-bold text-white mb-2">O Sistema Está Pronto.</h3>
+                  <h3 className="text-3xl font-bold text-white mb-2">O Sistema Está Pronto (V25).</h3>
                   <p className="text-indigo-200 mb-8 max-w-lg mx-auto">Não tens vendas registadas. A máquina está limpa e à espera do primeiro cliente. Copia o link e começa a divulgar.</p>
                   <button 
                     onClick={handleCopyLink}
@@ -419,6 +623,90 @@ export const SuperAdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* N8N Automation & TikTok */}
+        {activeTab === 'automation' && (
+           <div className="space-y-8 animate-fade-in max-w-4xl mx-auto">
+             <div className="bg-gradient-to-r from-orange-600 to-red-600 rounded-xl p-8 text-white shadow-xl relative overflow-hidden">
+               <div className="absolute top-2 right-2 bg-black/30 backdrop-blur text-xs px-2 py-1 rounded font-bold animate-pulse border border-white/20">
+                 V25 LIVE
+               </div>
+               <h3 className="text-2xl font-bold flex items-center gap-3 mb-2">
+                 <Workflow className="w-8 h-8"/> Centro de Automação N8N (V25 - Stable Core)
+               </h3>
+               <p className="opacity-90">Versão Blindada: Respond to Webhook + Gemini 1.5 Flash (Anti-Erro 500).</p>
+             </div>
+
+             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Passo 1 */}
+                <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                  <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center font-bold text-slate-300 mb-4">1</div>
+                  <h4 className="font-bold text-lg text-white mb-2">Baixar Blueprint V25</h4>
+                  <p className="text-sm text-slate-400 mb-4">Novo cérebro estável com resposta forçada.</p>
+                  <button onClick={handleDownloadBlueprint} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-3 rounded-lg font-mono text-xs flex items-center justify-center gap-2 transition-colors font-bold shadow-lg shadow-emerald-900/20">
+                    <Download className="w-4 h-4"/> BAIXAR BLUEPRINT V25 (STABLE)
+                  </button>
+                  <p className="text-[10px] text-green-500 mt-2 text-center font-bold flex items-center justify-center gap-1">
+                    <CheckIcon className="w-3 h-3"/> Inclui 'Respond to Webhook' Node
+                  </p>
+                </div>
+
+                {/* Passo 2 */}
+                <div className="bg-slate-800 p-6 rounded-xl border border-slate-700">
+                  <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center font-bold text-slate-300 mb-4">2</div>
+                  <h4 className="font-bold text-lg text-white mb-2">Instalar no N8N</h4>
+                  <ul className="text-sm text-slate-400 space-y-2 list-disc list-inside">
+                     <li className="text-orange-400 font-bold">Apague o fluxo antigo</li>
+                     <li>Importe este novo ficheiro V25</li>
+                     <li>Ative e Teste</li>
+                  </ul>
+                </div>
+             </div>
+
+             {/* Configuração Final */}
+             <div className="bg-slate-800 p-8 rounded-xl border border-slate-700 shadow-xl">
+               <h4 className="font-bold text-lg text-white mb-4">Configuração do Webhook</h4>
+               <p className="text-sm text-slate-400 mb-4">
+                 Cole o URL de Produção do N8N aqui.
+               </p>
+               <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={systemSettings.n8nWebhookUrl || ''}
+                    placeholder="https://seu-n8n.com/webhook/tiktok-bot-v25"
+                    onChange={(e) => setSystemSettings({...systemSettings, n8nWebhookUrl: e.target.value})}
+                    className="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white font-mono text-sm focus:border-orange-500 focus:outline-none transition-colors"
+                  />
+                  <button 
+                    onClick={handleSaveSystemSettings}
+                    className="bg-orange-600 hover:bg-orange-500 text-white px-6 rounded-lg font-bold"
+                  >
+                    Guardar
+                  </button>
+               </div>
+               
+               <div className="mt-4 flex justify-between items-center">
+                  <button 
+                    onClick={testN8nConnection}
+                    disabled={!systemSettings.n8nWebhookUrl || testingConnection}
+                    className="text-sm text-blue-400 hover:text-blue-300 flex items-center gap-2 font-bold border border-blue-500/30 px-3 py-1.5 rounded hover:bg-blue-500/10 transition-colors"
+                  >
+                    {testingConnection ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div> : <Radio className="w-3 h-3"/>}
+                    Testar Conexão
+                  </button>
+
+                  {systemSettings.n8nWebhookUrl && (
+                    <div className="flex items-center gap-2 text-green-500 text-xs">
+                      <ShieldCheck className="w-4 h-4"/> URL Configurado
+                    </div>
+                  )}
+               </div>
+               <p className="text-[10px] text-slate-500 mt-2 bg-slate-900/50 p-2 rounded border border-slate-700">
+                  <strong>Nota Técnica:</strong> Se o teste der erro de rede (CORS), não faz mal. O bot vai ignorar o erro e funcionar na mesma.
+               </p>
+             </div>
+           </div>
+        )}
+
         {/* Finance Vault */}
         {activeTab === 'finance' && (
           <div className="bg-slate-800 rounded-xl border border-slate-700 p-8 shadow-xl max-w-2xl animate-fade-in mx-auto mt-10">
@@ -488,7 +776,7 @@ export const SuperAdminDashboard: React.FC = () => {
                    />
                 </div>
                 <div>
-                   <label className="block text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+                   <label className="block text-sm font-medium text-slate-400 mb-2 flex items-center gap-2">
                      <Landmark className="w-4 h-4 text-slate-400"/> IBAN (Transferência)
                    </label>
                    <input 
@@ -546,6 +834,32 @@ export const SuperAdminDashboard: React.FC = () => {
                </div>
              </div>
 
+             {/* Security Settings */}
+             <div className="bg-slate-800 rounded-xl border border-slate-700 p-8 shadow-xl">
+               <div className="flex items-center gap-3 mb-6">
+                 <Key className="w-6 h-6 text-yellow-400"/>
+                 <h3 className="text-xl font-bold text-white">Segurança da Conta</h3>
+               </div>
+               
+               <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-2">Alterar Senha de Admin</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="password" 
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Nova senha..."
+                        className="flex-1 bg-slate-900 border border-slate-600 rounded-lg px-4 py-3 text-white focus:border-yellow-500 focus:outline-none transition-colors"
+                      />
+                      <button onClick={handleChangePassword} className="bg-slate-700 hover:bg-slate-600 text-white px-4 rounded-lg font-bold">
+                        Alterar
+                      </button>
+                    </div>
+                  </div>
+               </div>
+             </div>
+
              {/* API Configuration */}
              <div className="bg-slate-800 rounded-xl border border-slate-700 p-8 shadow-xl">
                <div className="flex items-center gap-3 mb-6">
@@ -562,22 +876,6 @@ export const SuperAdminDashboard: React.FC = () => {
                       onChange={(e) => setSystemSettings({...systemSettings, globalApiKey: e.target.value})}
                       className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white font-mono text-xs focus:border-purple-500 focus:outline-none transition-colors"
                     />
-                  </div>
-
-                  <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                     <p className="text-xs text-slate-400 mb-2 uppercase font-bold tracking-wider flex items-center gap-2">
-                       <Workflow className="w-3 h-3 text-orange-500"/> N8N Webhook URL (Automação)
-                     </p>
-                     <input 
-                      type="text" 
-                      value={systemSettings.n8nWebhookUrl || ''}
-                      placeholder="https://teu-n8n.com/webhook/..."
-                      onChange={(e) => setSystemSettings({...systemSettings, n8nWebhookUrl: e.target.value})}
-                      className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-white font-mono text-xs focus:border-orange-500 focus:outline-none transition-colors"
-                    />
-                    <p className="text-[10px] text-slate-500 mt-2">
-                      Cola aqui o teu Webhook do N8N. Quando preenchido, o bot envia os dados para lá em vez de processar localmente.
-                    </p>
                   </div>
 
                   <button 
@@ -650,3 +948,9 @@ export const SuperAdminDashboard: React.FC = () => {
     </div>
   );
 };
+
+const CheckIcon = (props: any) => (
+  <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+);

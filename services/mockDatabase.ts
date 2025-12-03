@@ -1,12 +1,12 @@
 
 import { User, Transaction, UserRole, AdminPaymentConfig, SystemSettings } from '../types';
 
-// VERSÃO 6.0 - MUNDO REAL (Limpeza total de dados de teste)
+// VERSÃO 25.0 - STABLE CORE (Cache Buster)
 const KEYS = {
-  USERS: 'tiktok_os_users_v6_real_world',
-  TRANSACTIONS: 'tiktok_os_transactions_v6_real_world',
-  PAYMENT_CONFIG: 'tiktok_os_payment_config_v6_real_world',
-  SYSTEM_SETTINGS: 'tiktok_os_system_settings_v6_real_world'
+  USERS: 'tiktok_os_users_v25_stable',
+  TRANSACTIONS: 'tiktok_os_transactions_v25_stable',
+  PAYMENT_CONFIG: 'tiktok_os_payment_config_v25_stable',
+  SYSTEM_SETTINGS: 'tiktok_os_system_settings_v25_stable'
 };
 
 // Seed Data LIMPO - Apenas o Dono existe inicialmente
@@ -28,11 +28,11 @@ const DEFAULT_USERS: User[] = [
 const DEFAULT_TRANSACTIONS: Transaction[] = [];
 
 const DEFAULT_CONFIG: AdminPaymentConfig = {
-  mbwayNumber: '', // Usuário deve configurar
+  mbwayNumber: '', 
   paypalEmail: '',
   cryptoWallet: '',
   iban: '',
-  whatsappNumber: '' // CRÍTICO: Usuário deve configurar para receber comprovativos
+  whatsappNumber: '' 
 };
 
 const DEFAULT_SETTINGS: SystemSettings = {
@@ -104,6 +104,17 @@ export const db = {
     transactions = [tx, ...transactions];
     save(KEYS.TRANSACTIONS, transactions);
     return tx;
+  },
+
+  changePassword: (userId: string, newPass: string) => {
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      user.password = newPass;
+      users = users.map(u => u.id === userId ? user : u);
+      save(KEYS.USERS, users);
+      return true;
+    }
+    return false;
   },
 
   // Auth
